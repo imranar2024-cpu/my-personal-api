@@ -1,0 +1,35 @@
+from flask import Flask, request, jsonify
+import yt_dlp
+
+app = Flask(__name__)
+
+@app.route('/download', methods=['GET'])
+def download():
+    video_url = request.args.get('url')
+    if not video_url:
+        return jsonify({"status": False, "error": "No URL provided"}), 400
+        
+    ydl_opts = {
+        'format': 'best',
+        'quiet': True,
+        'no_warnings': True,
+    }
+    
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(video_url, download=False)
+            direct_link = info.get('url')
+            
+            if not direct_link and 'entries' in info:
+                direct_link = info['entries'][0].get('url')
+                
+            if direct_link:
+                return jsonify({"status": True, "video_url": direct_link})
+            else:
+                return jsonify({"status": False, "error": "Direct link not found"}), 404
+                
+    except Exception as e:
+        return jsonify({"status": False, "error": str(e)}), 500
+
+if __name__ == "__main__":
+    app.run(host='0.0.0.0', port=5000)
