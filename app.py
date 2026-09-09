@@ -1,13 +1,27 @@
 from flask import Flask, request, jsonify
 import yt_dlp
+import requests
 
 app = Flask(__name__)
 
+def resolve_url(url):
+    try:
+        # ফেসবুকের /share/ লিংকগুলোকে আসল ভিডিও লিংকে রূপান্তর করার জন্য
+        response = requests.head(url, allow_redirects=True, timeout=10, headers={
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        })
+        return response.url
+    except Exception:
+        return url
+
 @app.route('/download', methods=['GET'])
 def download():
-    video_url = request.args.get('url')
-    if not video_url:
+    raw_url = request.args.get('url')
+    if not raw_url:
         return jsonify({"status": False, "error": "No URL provided"}), 400
+        
+    # রিয়েল URL বের করা
+    video_url = resolve_url(raw_url)
         
     ydl_opts = {
         'format': 'best',
@@ -15,7 +29,9 @@ def download():
         'no_warnings': True,
         'http_headers': {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
             'Accept-Language': 'en-US,en;q=0.9',
+            'Sec-Fetch-Mode': 'navigate',
         }
     }
     
